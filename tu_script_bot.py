@@ -3,9 +3,21 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+import os
+import logging # Necesario para la comprobación
+
+# ...
+
 # --- 1. CONFIGURACIÓN ---
-# Reemplaza 'TU_TOKEN_DE_TELEGRAM' con el token que te dio BotFather
-TELEGRAM_BOT_TOKEN = "TU_TOKEN_DE_TELEGRAM" 
+# Lee la variable desde el entorno de Render
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+
+
+# Esta comprobación es vital para detener el script si la variable no se encontró
+if not TELEGRAM_BOT_TOKEN:
+    # Registra el error y lo lanza para que Render lo vea
+    logging.error("La variable de entorno TELEGRAM_BOT_TOKEN no está configurada.")
+    raise ValueError("La variable de entorno TELEGRAM_BOT_TOKEN no está configurada.")
 
 # Configuración del logging para ver errores en la consola del servidor
 logging.basicConfig(
