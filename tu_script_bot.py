@@ -42,11 +42,11 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         if not transaction:
              return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
-# --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---
-print("\n--- INICIO DEPURACIÓN (JSON COMPLETO) ---")
-print(json.dumps(transaction, indent=4))
-print("--- FIN DEPURACIÓN --- \n")
-# ----------------------------------------------
+        # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---
+         print("\n--- INICIO DEPURACIÓN (JSON COMPLETO) ---")
+         print(json.dumps(transaction, indent=4))
+         print("--- FIN DEPURACIÓN --- \n")
+        # ----------------------------------------------
         
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
         contract_type = transaction.get("contractType") 
