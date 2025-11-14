@@ -40,7 +40,7 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         transaction = data.get("data", {}).get("transaction")
 
         if not transaction:
-             return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
+             return "⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
         # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---
          print("\n--- INICIO DEPURACIÓN (JSON COMPLETO) ---")
