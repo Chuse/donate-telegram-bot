@@ -1,1 +1,3 @@
-
+# Contenido de requirements.txt
+requests
+python-telegram-bot
