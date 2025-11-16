@@ -62,8 +62,8 @@ def get_transaction_details_klever(tx_hash: str) -> str:
            if payload:
               # Aquí buscamos el tipo dentro del payload. Podría llamarse 'type', 'contractType' o similar.
               # Imprime el payload completo para ver su estructura.
-             logger.info("DEBUG: PAYLOAD COMPLETO: %s", payload) 
-            else:
+              logger.info("DEBUG: PAYLOAD COMPLETO: %s", payload) 
+           else:
               logger.info("DEBUG: Transacción sin Payload.")
         # ------------------------------------
 
