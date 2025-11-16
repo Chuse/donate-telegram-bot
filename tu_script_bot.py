@@ -49,6 +49,12 @@ def get_transaction_details_klever(tx_hash: str) -> str:
              return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
         # Extracción y mapeo de campos comunes
+
+        # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---  
+        print(f"DEBUG: contractType ID recibido de la API: {contract_type_id} (Tipo: {type(contract_type_id)})")
+        # ----------------------------------------------
+
+        
         contract_type_id = transaction.get("contractType", 999) 
         contract_type = CONTRACT_TYPES.get(contract_type_id, "DESCONOCIDO")
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
@@ -58,6 +64,10 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         sender = transaction.get("senderAddress", "N/A")
         
         # --- Lógica Condicional ---
+
+        # --- CÓDIGO DE DEPURACIÓN ADICIONAL ---
+        print(f"DEBUG: Tipo de contrato Mapeado: {contract_type}")
+        # ----------------------------------------
 
         if contract_type == "Transfer":
             # Extrae detalles de una transferencia de tokens
