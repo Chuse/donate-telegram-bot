@@ -48,6 +48,17 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         if not transaction:
            return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
+        # --- 🚨 CÓDIGO DE DEPURACIÓN PROFUNDA 🚨 ---   
+        # Imprimimos las claves más comunes y el objeto completo para ver qué existe.
+        logger.info("DEBUG: contractType ID: %s", transaction.get("contractType"))
+        logger.info("DEBUG: senderAddress: %s", transaction.get("senderAddress"))
+        logger.info("DEBUG: receiverAddress: %s", transaction.get("receiverAddress"))
+        logger.info("DEBUG: assetId: %s", transaction.get("assetId"))
+
+        # Imprime la transacción completa (como texto plano JSON)
+        logger.info("DEBUG: TRANSACCIÓN COMPLETA: %s", json.dumps(transaction))
+        # ----------------------------------------------
+
         # Extracción y mapeo de campos comunes
         contract_type_id = transaction.get("contractType", 999) 
 
