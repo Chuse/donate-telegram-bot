@@ -5,21 +5,24 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# --- 1. CONFIGURACIÓN INICIAL ---
-# Las constantes numéricas de Klever Chain para el tipo de contrato.
+# --- 1. CONFIGURACIÓN INICIAL Y DEPENDENCIAS ---
+
+# Las constantes numéricas de Klever Chain (ya no se usan para la extracción, pero se mantienen como referencia)
+# La API nos está devolviendo ahora el tipo como una cadena de texto dentro de la lista 'contract'.
+# Este diccionario ya NO es necesario, pero lo mantenemos para claridad.
 CONTRACT_TYPES = {
     1: "Transfer",
     3: "AssetTrigger",
     15: "SmartContractCall",
-    # Añade más si los necesitas
 }
 
 # Leer el token de acceso desde las variables de entorno de Render
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") 
 if not TELEGRAM_BOT_TOKEN:
+    # Esto lanzará un error si el token no está configurado en Render
     raise ValueError("TELEGRAM_BOT_TOKEN no configurada. Por favor, añádela a las variables de entorno de Render.")
 
-# Configuración del logging para ver errores en la consola del servidor
+# Configuración del logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
     level=logging.INFO
@@ -32,7 +35,7 @@ logger = logging.getLogger(__name__)
 def get_transaction_details_klever(tx_hash: str) -> str:
     """
     Consulta los detalles de una transacción en Klever Chain, adaptando la extracción 
-    de datos según el tipo de contrato.
+    de datos a la estructura JSON correcta que usa la lista 'contract'.
     """
     KLEVER_API_BASE = "https://api.mainnet.klever.org/v1.0"
     endpoint = f"{KLEVER_API_BASE}/transaction/{tx_hash}"
@@ -43,97 +46,51 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         response.raise_for_status() 
         data = response.json()
         
-        transaction = data.get("data", {}).get("transaction")
+        # El objeto de la transacción principal para tu API está bajo 'data.transaction'
+        # o a veces 'data', dependiendo del endpoint, lo hacemos seguro:
+        # Buscamos en 'data.transaction' si existe, sino, asumimos que 'data' es la transacción.
+        transaction = data.get("data", {}).get("transaction") or data.get("data")
 
         if not transaction:
-           return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
+             return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
-        # --- 🚨 CÓDIGO DE DEPURACIÓN PROFUNDA 🚨 ---   
-        # Imprimimos las claves más comunes y el objeto completo para ver qué existe.
-        logger.info("DEBUG: contractType ID: %s", transaction.get("contractType"))
-        logger.info("DEBUG: senderAddress: %s", transaction.get("senderAddress"))
-        logger.info("DEBUG: receiverAddress: %s", transaction.get("receiverAddress"))
-        logger.info("DEBUG: assetId: %s", transaction.get("assetId"))
-
-        # Imprime la transacción completa (como texto plano JSON)
-        logger.info("DEBUG: TRANSACCIÓN COMPLETA: %s", json.dumps(transaction))
-        # ----------------------------------------------
-
-        # Extracción y mapeo de campos comunes
-        contract_type_id = transaction.get("contractType", 999) 
-
-        # Extrae el objeto payload
-        payload = transaction.get("payload", {})
-        # Intenta obtener el contractType del nivel superior (si existe)
-        contract_type_id = transaction.get("contractType", 999)
-
-        # --- DEBUG: INSPECCIÓN DE PAYLOAD ---
-        if contract_type_id == 999:
-           # Si el contractType no estaba en el nivel superior, mira en el payload
-           if payload:
-              # Aquí buscamos el tipo dentro del payload. Podría llamarse 'type', 'contractType' o similar.
-              # Imprime el payload completo para ver su estructura.
-              logger.info("DEBUG: PAYLOAD COMPLETO: %s", payload) 
-           else:
-              logger.info("DEBUG: Transacción sin Payload.")
-        # ------------------------------------
-
-        # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---  
-        print(f"DEBUG: contractType ID recibido de la API: {contract_type_id} (Tipo: {type(contract_type_id)})")
-        # ----------------------------------------------
+        # --- EXTRACCIÓN DE CAMPOS PRINCIPALES (Estructura de la última depuración) ---
         
-        contract_type = CONTRACT_TYPES.get(contract_type_id, "DESCONOCIDO")
+        # Estos campos están en el nivel superior de tu JSON
+        sender = transaction.get("sender", "N/A")
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
         
-        # Variables para el mensaje final
+        # 2. PROCESAMIENTO DEL CONTRATO (LISTA)
+        contracts = transaction.get("contract", [])
         detalles_adicionales = ""
-        sender = transaction.get("senderAddress", "N/A")
-        
-        # --- Lógica Condicional ---
+        contract_type = "DESCONOCIDO"
 
-        # --- CÓDIGO DE DEPURACIÓN ADICIONAL ---
-        print(f"DEBUG: Tipo de contrato Mapeado: {contract_type}")
-        # ----------------------------------------
+        # Asumimos que la lista 'contract' tiene al menos un elemento [0]
+        if contracts:
+            contract_info = contracts[0]
+            contract_type = contract_info.get("typeString", "N/A")  # Ej: "TransferContractType"
+            parameter = contract_info.get("parameter", {})
 
-        if contract_type == "Transfer":
-            # Extrae detalles de una transferencia de tokens
-            payload = transaction.get("payload", {})
-            amount = payload.get("amount", 0)
-            kda_symbol = payload.get("kda", "KLV")
-            receiver = payload.get("receiver", "N/A")
-            
-            # Formato: Asume 6 decimales para la división
-            display_amount = f"{int(amount) / 10**6:,.6f}" if isinstance(amount, (int, str)) and kda_symbol == "KLV" else amount
-            
-            detalles_adicionales = (
-                f"\n**Monto:** {display_amount} {kda_symbol}"
-                f"\n**Receptor:** `{receiver}`"
-            )
+            if contract_type == "TransferContractType":
+                # Extracción de detalles de Transferencia (ej: KFI)
+                amount = parameter.get("amount", 0)
+                kda_symbol = parameter.get("assetId", "KLV")
+                receiver = parameter.get("toAddress", "N/A")
 
-        elif contract_type == "SmartContractCall":
-            # Extrae detalles de una llamada a un Smart Contract (e.g., donación)
-            payload = transaction.get("payload", {})
-            data_field = payload.get("data", {})
-            
-            if data_field:
-                parameters = data_field.get("parameters", [])
-                
+                # Formato: Usamos el amount tal cual (se asume que la API lo normaliza)
                 detalles_adicionales = (
-                    f"\n**Función SC:** {data_field.get('callType', 'N/A')}"
+                    f"\n**Monto:** {amount} {kda_symbol}"
+                    f"\n**Receptor:** `{receiver}`"
                 )
-                if parameters:
-                    # Muestra hasta los primeros dos parámetros para evitar inundar el mensaje
-                    for i, param in enumerate(parameters[:2]):
-                        detalles_adicionales += (
-                            f"\n**Parámetro {i+1} ({param.get('type', 'N/A')}):** `{param.get('value', 'N/A')}`"
-                        )
+            elif contract_type == "SmartContractCallType":
+                 # Lógica adaptada para llamadas SC si la API usa esta estructura
+                 call_data = parameter.get("data", {})
+                 detalles_adicionales = (
+                    f"\n**Función SC:** {call_data.get('callType', 'N/A')}"
+                 )
             else:
-                detalles_adicionales = "\n*Llamada SC sin datos de Payload.*"
-
-        else:
-            # Contratos no analizados (Freeze, Delegate, etc.)
-            detalles_adicionales = f"\n*Contrato de Tipo {contract_type}: No analizado.*"
-            
+                 detalles_adicionales = f"\n*Contrato de Tipo {contract_type}: No analizado.*"
+        
         # --- Mensaje Final ---
         message = (
             f"🔍 **Detalles de Transacción en Klever Chain**\n"
@@ -151,6 +108,7 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         logger.error("Error de conexión al API de Klever: %s", e)
         return f"🚨 Error de conexión al API de Klever."
     except Exception as e:
+        # Captura errores de JSON malformado o fallos de indexación
         logger.error("Error inesperado al analizar la transacción: %s", e)
         return f"❌ Ocurrió un error inesperado al analizar la transacción: {e}"
 
@@ -189,12 +147,17 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # Registra el error completo en el log de Render
     logger.error("Excepción al procesar la actualización: %s", context.error, exc_info=True)
 
+    # El error de conflicto de polling se maneja silenciosamente
+    if "Conflict" in str(context.error):
+        logger.warning("Conflicto de Polling detectado y manejado. Otra instancia está activa.")
+        return
+        
     # Notificar al usuario (si el error ocurrió durante una interacción)
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text("Lo siento, hubo un error interno. Por favor, intenta de nuevo o revisa el hash.")
         except Exception:
-            pass # Ignorar si no se puede enviar el mensaje de error
+            pass 
 
 # --- 5. FUNCIÓN PRINCIPAL DE EJECUCIÓN ---
 
@@ -210,7 +173,7 @@ def main() -> None:
 
     # Inicia la escucha (polling) del bot
     logger.info("Bot iniciado. Escuchando nuevos mensajes...")
-    application.run_polling(poll_interval=1.0)
+    application.run_polling(poll_interval=1.0) # El poll_interval puede ser ajustado
 
 if __name__ == "__main__":
     main()
