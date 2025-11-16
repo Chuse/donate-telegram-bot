@@ -12,7 +12,6 @@ import logging # Necesario para la comprobación
 # Lee la variable desde el entorno de Render
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
-
 # Esta comprobación es vital para detener el script si la variable no se encontró
 if not TELEGRAM_BOT_TOKEN:
     # Registra el error y lo lanza para que Render lo vea
@@ -42,12 +41,6 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         if not transaction:
              return "⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
-        # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---
-         print("\n--- INICIO DEPURACIÓN (JSON COMPLETO) ---")
-         print(json.dumps(transaction, indent=4))
-         print("--- FIN DEPURACIÓN --- \n")
-        # ----------------------------------------------
-        
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
         contract_type = transaction.get("contractType") 
         sender = transaction.get("senderAddress")
