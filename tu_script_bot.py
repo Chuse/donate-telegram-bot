@@ -51,6 +51,22 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         # Extracción y mapeo de campos comunes
         contract_type_id = transaction.get("contractType", 999) 
 
+        # Extrae el objeto payload
+        payload = transaction.get("payload", {})
+        # Intenta obtener el contractType del nivel superior (si existe)
+        contract_type_id = transaction.get("contractType", 999)
+
+        # --- DEBUG: INSPECCIÓN DE PAYLOAD ---
+        if contract_type_id == 999:
+           # Si el contractType no estaba en el nivel superior, mira en el payload
+           if payload:
+              # Aquí buscamos el tipo dentro del payload. Podría llamarse 'type', 'contractType' o similar.
+              # Imprime el payload completo para ver su estructura.
+             logger.info("DEBUG: PAYLOAD COMPLETO: %s", payload) 
+            else:
+              logger.info("DEBUG: Transacción sin Payload.")
+        # ------------------------------------
+
         # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---  
         print(f"DEBUG: contractType ID recibido de la API: {contract_type_id} (Tipo: {type(contract_type_id)})")
         # ----------------------------------------------
