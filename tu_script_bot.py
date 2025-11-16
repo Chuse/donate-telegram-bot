@@ -60,6 +60,13 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         
         # 2. Lógica Condicional (if/elif/else)
 
+        # 1. Extraer el valor numérico del contrato
+        # contract_type contendrá ahora el número (ej: 1, 3, 15)
+        contract_type_id = transaction.get("contractType", 999) 
+
+        # 2. Mapear el número a la cadena de texto legible
+        contract_type = CONTRACT_TYPES.get(contract_type_id, "DESCONOCIDO")
+
         if contract_type == "Transfer":
             # --- TIPO 1: TRANSFERENCIA SIMPLE (KLV o KDA) ---
             
