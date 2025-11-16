@@ -51,7 +51,7 @@ def get_transaction_details_klever(tx_hash: str) -> str:
              return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
         # 1. Extraer los campos comunes
-        contract_type = transaction.get("contractType", "DESCONOCIDO")
+        # contract_type = transaction.get("contractType", "DESCONOCIDO")
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
         
         # Variables que almacenarán la información condicional
@@ -63,10 +63,12 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         # 1. Extraer el valor numérico del contrato
         # contract_type contendrá ahora el número (ej: 1, 3, 15)
         contract_type_id = transaction.get("contractType", 999) 
+        print(f"DEBUG: contractType ID recibido de la API: {contract_type_id} (Tipo: {type(contract_type_id)})")
 
         # 2. Mapear el número a la cadena de texto legible
         contract_type = CONTRACT_TYPES.get(contract_type_id, "DESCONOCIDO")
 
+        print(f"DEBUG: Tipo de contrato Mapeado: {contract_type}")
         if contract_type == "Transfer":
             # --- TIPO 1: TRANSFERENCIA SIMPLE (KLV o KDA) ---
             
