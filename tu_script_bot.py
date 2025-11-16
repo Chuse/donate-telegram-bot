@@ -46,18 +46,14 @@ def get_transaction_details_klever(tx_hash: str) -> str:
         transaction = data.get("data", {}).get("transaction")
 
         if not transaction:
-             return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
+           return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
         # Extracción y mapeo de campos comunes
-
-      
-        
         contract_type_id = transaction.get("contractType", 999) 
 
         # --- 🚨 CÓDIGO DE DEPURACIÓN AÑADIDO 🚨 ---  
         print(f"DEBUG: contractType ID recibido de la API: {contract_type_id} (Tipo: {type(contract_type_id)})")
         # ----------------------------------------------
-
         
         contract_type = CONTRACT_TYPES.get(contract_type_id, "DESCONOCIDO")
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
