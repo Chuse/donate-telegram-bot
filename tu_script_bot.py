@@ -26,35 +26,87 @@ logger = logging.getLogger(__name__)
 
 # --- 2. LÓGICA DE KLEVER (Función del ejemplo anterior) ---
 def get_transaction_details_klever(tx_hash: str) -> str:
-    """Consulta los detalles de una transacción en la Klever Blockchain."""
+    """
+    Consulta los detalles de una transacción, adaptando la extracción de datos
+    según el tipo de contrato (contractType).
+    """
     KLEVER_API_BASE = "https://api.mainnet.klever.org/v1.0"
     endpoint = f"{KLEVER_API_BASE}/transaction/{tx_hash}"
 
     try:
         response = requests.get(endpoint, timeout=10)
-        response.raise_for_status()
+        response.raise_for_status() 
         data = response.json()
         
-        # ... (La lógica de procesamiento del JSON y formateo del mensaje es la misma) ...
         transaction = data.get("data", {}).get("transaction")
 
         if not transaction:
-             return "⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
+             return f"⚠️ Transacción no encontrada o incompleta para el hash: {tx_hash}"
 
+        # 1. Extraer los campos comunes
+        contract_type = transaction.get("contractType", "DESCONOCIDO")
         tx_status = "✅ ÉXITO" if transaction.get("status") == "success" else f"❌ FALLIDA / {transaction.get('status')}"
-        contract_type = transaction.get("contractType") 
-        sender = transaction.get("senderAddress")
-        receiver = transaction.get("receiverAddress", "N/A")
+        
+        # Variables que almacenarán la información condicional
+        detalles_adicionales = ""
+        sender = transaction.get("senderAddress", "N/A")
+        
+        # 2. Lógica Condicional (if/elif/else)
 
+        if contract_type == "Transfer":
+            # --- TIPO 1: TRANSFERENCIA SIMPLE (KLV o KDA) ---
+            
+            # Los datos clave están a nivel superior o en el payload/data
+            payload = transaction.get("payload", {})
+            amount = payload.get("amount", "0")
+            kda_symbol = payload.get("kda", "KLV")
+            receiver = payload.get("receiver", "N/A")
+            
+            # Construir el detalle específico para Transfer
+            detalles_adicionales = (
+                f"\n**Cantidad:** {int(amount) / 10**6} {kda_symbol}"
+                f"\n**Receptor:** `{receiver}`"
+            )
+
+        elif contract_type == "SmartContractCall":
+            # --- TIPO 2: LLAMADA A SMART CONTRACT ---
+            
+            # El sender real (usuario) puede estar en 'senderAddress' o anidado
+            payload = transaction.get("payload", {})
+            data_field = payload.get("data", {})
+            
+            # Buscar el sender real (que hizo la llamada)
+            if data_field:
+                # La dirección del usuario (sender real) suele ser el primer parámetro
+                # en el array 'parameters' (es una suposición basada en la estructura de Klever)
+                parameters = data_field.get("parameters", [])
+                
+                # Ejemplo de extracción del primer parámetro si existe
+                if parameters:
+                    primer_param_valor = parameters[0].get("value", "N/A")
+                    primer_param_tipo = parameters[0].get("type", "Texto")
+                    
+                    detalles_adicionales = (
+                        f"\n**Función SC:** {data_field.get('callType', 'N/A')}"
+                        f"\n**Parámetro 1 ({primer_param_tipo}):** `{primer_param_valor}`"
+                    )
+                else:
+                    detalles_adicionales = "\n**Sin Parámetros SC Adicionales**"
+
+        else:
+            # --- OTROS TIPOS: Freeze, Stake, etc. ---
+            detalles_adicionales = "\n*Contrato Desconocido o con estructura no analizada.*"
+            
+        # 3. Construir el mensaje final para Telegram
         message = (
             f"🔍 **Detalles de Transacción en Klever Chain**\n"
             f"----------------------------------------\n"
             f"**Hash (ID):** `{tx_hash[:10]}...`\n"
             f"**Estado:** {tx_status}\n"
-            f"**Tipo de Contrato:** {contract_type}\n"
-            f"**Emisor:** `{sender}`\n"
-            f"**Receptor:** `{receiver}`\n"
-            f"**Explorer:** [Ver en KleverScan](https://kleverscan.org/tx/{tx_hash})\n"
+            f"**Tipo de Contrato:** **{contract_type}**"
+            f"\n**Emisor (Principal):** `{sender}`"
+            f"{detalles_adicionales}" # Se insertan los detalles específicos aquí
+            f"\n\n**Explorer:** [Ver en KleverScan](https://kleverscan.org/tx/{tx_hash})\n"
         )
         return message
 
