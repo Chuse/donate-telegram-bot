@@ -6,6 +6,12 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 import os
 import logging # Necesario para la comprobación
 
+# Mapeo de constantes de contrato de Klever Chain
+CONTRACT_TYPES = {
+    1: "Transfer",
+    3: "AssetTrigger",
+    15: "SmartContractCall",
+
 # ...
 
 # --- 1. CONFIGURACIÓN ---
