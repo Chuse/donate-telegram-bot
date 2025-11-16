@@ -10,7 +10,7 @@ import logging # Necesario para la comprobación
 CONTRACT_TYPES = {
     1: "Transfer",
     3: "AssetTrigger",
-    15: "SmartContractCall",
+    15: "SmartContractCall"}
 
 # ...
 
